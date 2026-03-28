@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import os
 import shutil
 from dotenv import load_dotenv
@@ -31,6 +32,9 @@ async def health_check():
 
 # Initialize Services globally (or using FastAPI dependencies in larger apps)
 vector_db_service = VectorDBService()
+
+class ChatRequest(BaseModel):
+    query: str
 
 async def process_document(file_path: str, filename: str):
     """Heavy background task to process, chunk, and embed PDFs."""
@@ -68,4 +72,40 @@ async def upload_document(
     # Add the document processing to the background task
     background_tasks.add_task(process_document, temp_file_path, file.filename)
     
-    return {"filename": file.filename, "message": "Upload successful. Processing in background."}
+    return {"filename": file.filename, "message": "Upload successful. Processing in background.", "task_id": file.filename}
+
+@app.post("/api/chat")
+async def chat_endpoint(request: ChatRequest):
+    """Search vector DB and formulate an answer using RAG"""
+    try:
+        # Basic implementation: We will just grab chunks and let OpenAI generate a response here
+        docs = vector_db_service.db.similarity_search(request.query, k=5)
+        
+        if not docs:
+            return {"role": "assistant", "content": "I don't have any uploaded documents to pull context from yet. Please upload a PDF first."}
+
+        context = "\n\n".join([doc.page_content for doc in docs])
+
+        from langchain_openai import ChatOpenAI
+        from langchain_core.messages import SystemMessage, HumanMessage
+
+        llm = ChatOpenAI(temperature=0.3, model="gpt-3.5-turbo")
+        
+        system_prompt = (
+            "You are an expert architectural and engineering AI assistant named BuildSight RAG. "
+            "Use the provided document context to answer the user's question accurately and professionally. "
+            "If the answer cannot be found in the context, state that clearly."
+        )
+
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=f"Context:\n{context}\n\nQuestion: {request.query}")
+        ]
+
+        response = llm(messages)
+        
+        return {"role": "assistant", "content": response.content}
+        
+    except Exception as e:
+        print(e)
+        return {"role": "assistant", "content": "I encountered an error trying to process your request."}
