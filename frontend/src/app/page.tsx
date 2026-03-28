@@ -6,28 +6,39 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, BookOpen, FileText } from "lucide-react";
 import { useState } from "react";
+import axios from 'axios';
 
 export default function Home() {
   const [messages, setMessages] = useState([
     { role: 'assistant', content: 'Welcome to BuildSight RAG. Upload your architectural documents and ask questions below.' }
   ]);
   const [inputStr, setInputStr] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<{ id: string, name: string }[]>([]);
 
   const handleUploadSuccess = (taskId: string) => {
     setUploadedFiles(prev => [...prev, { id: taskId, name: `Document - ${taskId.substring(0,6)}` }]);
   };
 
-  const handleSendMessage = () => {
-    if (!inputStr.trim()) return;
+  const handleSendMessage = async () => {
+    if (!inputStr.trim() || isLoading) return;
     
-    setMessages(prev => [...prev, { role: 'user', content: inputStr }]);
-    
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'This is a simulated response based on your query.' }]);
-    }, 1000);
-
+    const userMessage = inputStr;
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setInputStr('');
+    setIsLoading(true);
+    
+    try {
+      const response = await axios.post('http://localhost:8000/api/chat', {
+        query: userMessage
+      });
+      
+      setMessages(prev => [...prev, { role: 'assistant', content: response.data.content }]);
+    } catch (error) {
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Connection to BuildSight RAG API failed. Make sure the backend server is running.' }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -97,14 +108,19 @@ export default function Home() {
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
               placeholder="Ask a question about your architecture documents..."
               className="pr-14 h-14 rounded-2xl bg-[#F4F4F5] border-transparent focus-visible:ring-primary focus-visible:bg-white transition-all text-[15px] shadow-sm"
+              disabled={isLoading}
             />
             <Button 
               size="icon" 
               onClick={handleSendMessage}
-              disabled={!inputStr.trim()}
+              disabled={!inputStr.trim() || isLoading}
               className="absolute right-2 rounded-xl h-10 w-10 transition-transform active:scale-95"
             >
-              <Send className="h-4 w-4" />
+              {isLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
             </Button>
           </div>
           <p className="text-center text-xs text-muted-foreground mt-3">
