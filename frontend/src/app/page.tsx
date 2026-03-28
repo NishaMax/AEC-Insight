@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { FileUpload } from '@/components/file-upload';
+import { ChatInterface } from '@/components/chat-interface';
 import axios from 'axios';
 
 export default function Home() {
@@ -88,6 +89,20 @@ export default function Home() {
                 <p>No documents uploaded yet. Start by uploading a PDF above.</p>
               </div>
             )}
+          </div>
+          
+          {/* AI Chat Interface Section */}
+          <div className="mt-16 pb-16">
+            <h3 className="text-xl font-semibold mb-6 flex items-center">
+              <span className="bg-primary/10 text-primary p-2 rounded-lg mr-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              </span>
+              Analyze Documents
+            </h3>
+            
+            <div className="max-w-4xl mx-auto">
+              <ChatInterface />
+            </div>
           </div>
         </div>
       </div>
