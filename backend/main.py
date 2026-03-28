@@ -90,6 +90,16 @@ async def get_document_status(task_id: str):
     status = document_statuses.get(task_id, "unknown")
     return {"task_id": task_id, "status": status}
 
+@app.get("/api/documents")
+async def list_documents():
+    """Retrieve all uniquely uploaded and vectorized document filenames."""
+    try:
+        documents = vector_db_service.get_all_documents()
+        return {"documents": documents}
+    except Exception as e:
+        print(f"Failed to fetch documents list: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch documents.")
+
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
     """Search vector DB and formulate an answer using RAG"""

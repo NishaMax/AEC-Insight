@@ -1,133 +1,96 @@
 "use client";
-
-import { FileUpload } from "@/components/file-upload";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Send, BookOpen, FileText } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from 'react';
+import { FileUpload } from '@/components/file-upload';
 import axios from 'axios';
 
 export default function Home() {
-  const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Welcome to BuildSight RAG. Upload your architectural documents and ask questions below.' }
-  ]);
-  const [inputStr, setInputStr] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<{ id: string, name: string }[]>([]);
+  const [documents, setDocuments] = useState<string[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState<boolean>(true);
 
-  const handleUploadSuccess = (taskId: string) => {
-    setUploadedFiles(prev => [...prev, { id: taskId, name: `Document - ${taskId.substring(0,6)}` }]);
-  };
-
-  const handleSendMessage = async () => {
-    if (!inputStr.trim() || isLoading) return;
-    
-    const userMessage = inputStr;
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    setInputStr('');
-    setIsLoading(true);
-    
+  // Fetch documents function
+  const fetchDocuments = async () => {
     try {
-      const response = await axios.post('http://localhost:8000/api/chat', {
-        query: userMessage
-      });
-      
-      setMessages(prev => [...prev, { role: 'assistant', content: response.data.content }]);
+      const response = await axios.get('http://localhost:8000/api/documents');
+      if (response.data && response.data.documents) {
+        setDocuments(response.data.documents);
+      }
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Connection to BuildSight RAG API failed. Make sure the backend server is running.' }]);
+      console.error("Failed to fetch documents", error);
     } finally {
-      setIsLoading(false);
+      setLoadingDocs(false);
     }
   };
 
+  // Initial fetch on mount
+  useEffect(() => {
+    fetchDocuments();
+  }, []);
+
+  const handleUploadSuccess = (taskId: string) => {
+    console.log(`Successfully processed document with task: ${taskId}`);
+    // Refresh document list after successful upload processing
+    fetchDocuments();
+  };
+
   return (
-    <div className="flex h-screen w-full bg-[#FAFAFA]">
-      <aside className="w-80 border-r bg-white p-6 flex flex-col gap-6 h-full shadow-sm z-20">
-        <div>
-          <h1 className="text-xl font-bold flex items-center gap-2 text-primary">
-            <BookOpen className="h-6 w-6" />
-            BuildSight RAG
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Architectural Document Intelligence</p>
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Upload Document</h2>
-          <FileUpload onSuccess={handleUploadSuccess} />
-        </div>
-
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Recent Documents</h2>
-          <ScrollArea className="flex-1">
-            <div className="space-y-2 pr-4">
-              {uploadedFiles.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">No documents uploaded yet.</p>
-              ) : (
-                uploadedFiles.map(file => (
-                  <div key={file.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 cursor-pointer transition-colors">
-                    <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="text-sm font-medium truncate">{file.name}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-      </aside>
-
-      <main className="flex-1 flex flex-col h-full bg-white relative">
-        <header className="h-16 border-b flex items-center px-8 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-          <h2 className="text-lg font-semibold tracking-tight">Document Chat</h2>
+    <div className="flex bg-background min-h-screen font-sans">
+      <div className="flex-1 flex flex-col">
+        {/* Main Header */}
+        <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b px-8 py-4">
+          <h2 className="text-2xl font-bold">
+            Welcome to BuildSight Central
+          </h2>
+          <p className="text-muted-foreground mt-2 max-w-2xl text-center">
+            Securely upload and query complex architectural PDFs, building codes, and zoning manuals. 
+            Get AI-driven insights extracted directly from your verified sources.
+          </p>
         </header>
 
-        <ScrollArea className="flex-1 px-8 py-6">
-          <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-4">
-            {messages.map((message, i) => (
-              <div key={i} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div 
-                  className={`
-                    max-w-[85%] rounded-2xl px-6 py-4 shadow-sm
-                    ${message.role === 'user' 
-                      ? 'bg-primary text-primary-foreground rounded-br-sm' 
-                      : 'bg-[#F4F4F5] text-foreground rounded-bl-sm border border-black/5'}
-                  `}
-                >
-                  <p className="text-[15px] leading-relaxed">{message.content}</p>
-                </div>
-              </div>
-            ))}
+        {/* Main Content */}
+        <div className="flex-1 p-8">
+          {/* Upload Section */}
+          <div className="w-full max-w-3xl mx-auto">
+            <FileUpload onSuccess={handleUploadSuccess} />
           </div>
-        </ScrollArea>
 
-        <div className="p-6 bg-white border-t">
-          <div className="max-w-4xl mx-auto relative flex items-center">
-            <Input 
-              value={inputStr}
-              onChange={(e) => setInputStr(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="Ask a question about your architecture documents..."
-              className="pr-14 h-14 rounded-2xl bg-[#F4F4F5] border-transparent focus-visible:ring-primary focus-visible:bg-white transition-all text-[15px] shadow-sm"
-              disabled={isLoading}
-            />
-            <Button 
-              size="icon" 
-              onClick={handleSendMessage}
-              disabled={!inputStr.trim() || isLoading}
-              className="absolute right-2 rounded-xl h-10 w-10 transition-transform active:scale-95"
-            >
-              {isLoading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
+          {/* Document Overview Section */}
+          <div className="mt-16">
+            <h3 className="text-xl font-semibold mb-6 flex items-center">
+              <span className="bg-primary/10 text-primary p-2 rounded-lg mr-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
+              </span>
+              Recent Documents
+            </h3>
+            
+            {loadingDocs ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-32 rounded-xl bg-muted animate-pulse border"></div>
+                ))}
+              </div>
+            ) : documents.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {documents.map((docName, index) => (
+                  <div key={index} className="group p-5 rounded-xl border bg-card hover:border-primary/50 hover:shadow-md transition-all">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      </div>
+                      <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">Ready</span>
+                    </div>
+                    <h4 className="font-medium text-sm truncate" title={docName}>{docName}</h4>
+                    <p className="text-xs text-muted-foreground mt-1">Vectorized & embedded</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center rounded-xl border border-dashed text-muted-foreground">
+                <p>No documents uploaded yet. Start by uploading a PDF above.</p>
+              </div>
+            )}
           </div>
-          <p className="text-center text-xs text-muted-foreground mt-3">
-            BuildSight handles complex engineering & architectural documents. Verify key technical data.
-          </p>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
