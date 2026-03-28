@@ -108,6 +108,19 @@ async def list_documents():
         print(f"Failed to fetch documents list: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch documents.")
 
+@app.delete("/api/documents/{filename}")
+async def delete_document(filename: str):
+    """Delete a document and all its embedded chunks from the Vector DB."""
+    success = vector_db_service.delete_document(filename=filename)
+    if not success:
+        raise HTTPException(status_code=500, detail=f"Failed to delete document {filename}")
+    
+    # Also clean up status dictionary if needed
+    if filename in document_statuses:
+        del document_statuses[filename]
+        
+    return {"message": f"Document {filename} successfully deleted."}
+
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
     """Search vector DB and formulate an answer using RAG with Conversation History."""
