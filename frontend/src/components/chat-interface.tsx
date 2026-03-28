@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { Send, User, Bot, Loader2 } from 'lucide-react';
 import { Card } from './ui/card';
+import { v4 as uuidv4 } from 'uuid'; // We'll need a simple session ID
 
 interface Message {
   role: 'user' | 'assistant';
@@ -9,6 +10,7 @@ interface Message {
 }
 
 export function ChatInterface() {
+  const [sessionId] = useState(() => uuidv4()); // Generate unique session per mount
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: 'Welcome to BuildSight RAG. Ask me anything about your uploaded architectural documents!' }
   ]);
@@ -34,7 +36,8 @@ export function ChatInterface() {
 
     try {
       const response = await axios.post('http://localhost:8000/api/chat', {
-        query: userMessage
+        query: userMessage,
+        session_id: sessionId
       });
       setMessages(prev => [...prev, { role: 'assistant', content: response.data.content }]);
     } catch (_error) {

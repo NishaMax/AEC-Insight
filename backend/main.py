@@ -36,8 +36,16 @@ vector_db_service = VectorDBService()
 # Dictionary to keep track of document processing status
 document_statuses = {}
 
+# Simple in-memory storage for chat history by session/user
+chat_histories = {}
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
 class ChatRequest(BaseModel):
     query: str
+    session_id: str = "default"  # Optional session ID to track history
 
 async def process_document(file_path: str, filename: str):
     """Heavy background task to process, chunk, and embed PDFs."""
@@ -102,8 +110,15 @@ async def list_documents():
 
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
-    """Search vector DB and formulate an answer using RAG"""
+    """Search vector DB and formulate an answer using RAG with Conversation History."""
     try:
+        # Retrieve or initialize conversation history for the session
+        session_id = request.session_id
+        if session_id not in chat_histories:
+            chat_histories[session_id] = []
+            
+        history = chat_histories[session_id]
+
         # Basic implementation: We will just grab chunks and let OpenAI generate a response here
         docs = vector_db_service.db.similarity_search(request.query, k=5)
         
@@ -113,7 +128,7 @@ async def chat_endpoint(request: ChatRequest):
         context = "\n\n".join([doc.page_content for doc in docs])
 
         from langchain_openai import ChatOpenAI
-        from langchain_core.messages import SystemMessage, HumanMessage
+        from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
         llm = ChatOpenAI(temperature=0.3, model="gpt-3.5-turbo")
         
@@ -123,15 +138,29 @@ async def chat_endpoint(request: ChatRequest):
             "If the answer cannot be found in the context, state that clearly."
         )
 
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=f"Context:\n{context}\n\nQuestion: {request.query}")
-        ]
+        # Build prompt using recent history (e.g., last 4 messages to save context limits)
+        messages = [SystemMessage(content=system_prompt)]
+        
+        # Add a few past interactions for context
+        for msg in history[-4:]:
+            if msg["role"] == "user":
+                messages.append(HumanMessage(content=msg["content"]))
+            elif msg["role"] == "assistant":
+                messages.append(AIMessage(content=msg["content"]))
 
-        response = llm(messages)
+        # Append the current query with the extracted context
+        messages.append(
+            HumanMessage(content=f"Context:\n{context}\n\nQuestion: {request.query}")
+        )
+
+        response = llm.invoke(messages)
         
+        # Save to history
+        chat_histories[session_id].append({"role": "user", "content": request.query})
+        chat_histories[session_id].append({"role": "assistant", "content": response.content})
+
         return {"role": "assistant", "content": response.content}
-        
+
     except Exception as e:
-        print(e)
+        print(f"Chat error: {e}")
         return {"role": "assistant", "content": "I encountered an error trying to process your request."}
