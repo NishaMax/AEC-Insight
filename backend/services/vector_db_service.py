@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Dict, Any
 import chromadb
 from chromadb.config import Settings
 from langchain_openai import OpenAIEmbeddings
@@ -20,3 +20,23 @@ class VectorDBService:
         self.collection = self.chroma_client.get_or_create_collection(
             name=self.collection_name
         )
+        
+    def add_chunks(self, chunks: List[str], filename: str) -> None:
+        """Embeds and uploads text chunks to ChromaDB."""
+        if not chunks:
+            return
+
+        # Generate unique IDs for each chunk based on filename and index
+        ids = [f"{filename}_chunk_{i}" for i in range(len(chunks))]
+        metadatas = [{"source": filename, "chunk_index": i} for i in range(len(chunks))]
+        
+        # We explicitly embed using the specified OpenAI model 
+        embedded_docs = self.embeddings.embed_documents(chunks)
+        
+        self.collection.add(
+            embeddings=embedded_docs,
+            documents=chunks,
+            metadatas=metadatas,
+            ids=ids
+        )
+        print(f"Successfully added {len(chunks)} chunks to vector database for {filename}.")
