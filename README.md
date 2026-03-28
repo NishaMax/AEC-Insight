@@ -8,10 +8,10 @@ BuildSight RAG is a full-stack Retrieval-Augmented Generation (RAG) system. The 
 
 ## Tech Stack
 
-*   **Backend:** Python, FastAPI (Strictly async/await).
-*   **AI/ML Frameworks:** LangChain, OpenAI API.
-*   **Vector Database:** ChromaDB (Local).
-*   **Frontend:** Next.js (App Router), React, Tailwind CSS.
+- **Backend:** Python, FastAPI (Strictly async/await).
+- **AI/ML Frameworks:** LangChain, OpenAI API.
+- **Vector Database:** ChromaDB (Local).
+- **Frontend:** Next.js (App Router), React, Tailwind CSS.
 
 ## Architecture
 
@@ -23,28 +23,32 @@ BuildSight RAG is a full-stack Retrieval-Augmented Generation (RAG) system. The 
 
 ## Workflow Strategy
 
-*   **`main` Branch:** Production-ready code.
-*   **`develop` Branch:** Integration branch. Features merge here before going to main.
-*   **`feature/*` Branches:** Create for everyday tasks (e.g., `feature/backend-setup`), merge into `develop` when stable.
+- **`main` Branch:** Production-ready code.
+- **`develop` Branch:** Integration branch. Features merge here before going to main.
+- **`feature/*` Branches:** Create for everyday tasks (e.g., `feature/backend-setup`), merge into `develop` when stable.
 
 ## Plan
 
 ### Phase 1: Project Setup & Foundation
-*   Setup Next.js Frontend.
-*   Setup FastAPI Backend.
-*   Configure Docker (optional but recommended for consistency).
+
+- Setup Next.js Frontend.
+- Setup FastAPI Backend.
+- Configure Docker (optional but recommended for consistency).
 
 ### Phase 2: Document Ingestion Pipeline
-*   Frontend: PDF Upload UI.
-*   Backend: File receiving endpoint (async).
-*   Processing: Text extraction and chunking.
-*   Embedding: Store into ChromaDB using background tasks.
+
+- Frontend: PDF Upload UI.
+- Backend: File receiving endpoint (async).
+- Processing: Text extraction and chunking.
+- Embedding: Store into ChromaDB using background tasks.
 
 ### Phase 3: Querying and RAG Pipeline
-*   Backend: Query endpoint, similarity search in ChromaDB.
-*   LLM Integration: Prompt construction and generating streamed responses.
-*   Frontend: Engineering-tailored chat interface (ChatGPT style).
+
+- Backend: Query endpoint, similarity search in ChromaDB.
+- LLM Integration: Prompt construction and generating streamed responses.
+- Frontend: Engineering-tailored chat interface (ChatGPT style).
 
 ### Phase 4: CI/CD & Deployment
-*   GitHub Actions for Linting/Testing.
-*   Deployment setup (Vercel for Frontend, Render/Koyeb for Backend).
+
+- GitHub Actions for Linting/Testing.
+- Deployment setup (Vercel for Frontend, Render/Koyeb for Backend).
