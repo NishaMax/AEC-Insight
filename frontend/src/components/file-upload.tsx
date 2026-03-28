@@ -42,18 +42,43 @@ export function FileUpload({ onSuccess, className }: FileUploadProps) {
           'Content-Type': 'multipart/form-data',
         },
       });
-      setSuccess(true);
-      if (onSuccess) {
-        onSuccess(response.data.task_id);
-      }
+      
+      const taskId = response.data.task_id;
+      
+      // Poll for processing status
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await axios.get(`http://localhost:8000/api/documents/status/${taskId}`);
+          const status = statusRes.data.status;
+          
+          if (status === 'completed') {
+            clearInterval(pollInterval);
+            setUploading(false);
+            setSuccess(true);
+            if (onSuccess) {
+              onSuccess(taskId);
+            }
+          } else if (status === 'failed') {
+            clearInterval(pollInterval);
+            setUploading(false);
+            setError('Document processing failed.');
+          }
+        } catch (pollErr) {
+          // ignore error to satisfy lint or log it
+          console.error('Polling error', pollErr);
+          clearInterval(pollInterval);
+          setUploading(false);
+          setError('Lost connection while checking document status.');
+        }
+      }, 2000);
+      
     } catch (err: unknown) {
+      setUploading(false);
       if (axios.isAxiosError(err)) {
         setError(err.response?.data?.detail || 'An error occurred during upload.');
       } else {
         setError('An unexpected error occurred.');
       }
-    } finally {
-      setUploading(false);
     }
   }, [onSuccess]);
 
@@ -76,7 +101,7 @@ export function FileUpload({ onSuccess, className }: FileUploadProps) {
         {uploading ? (
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
-            <p className="text-sm text-muted-foreground">Uploading document...</p>
+            <p className="text-sm text-muted-foreground">Uploading and processing document...</p>
           </div>
         ) : success ? (
           <div className="flex flex-col items-center gap-4 text-green-600">
