@@ -37,7 +37,7 @@ export function FileUpload({ onSuccess, className }: FileUploadProps) {
     formData.append('file', file);
 
     try {
-      const response = await axios.post('http://localhost:8000/api/v1/documents/upload', formData, {
+      const response = await axios.post('http://localhost:8000/api/documents/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
