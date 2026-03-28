@@ -57,3 +57,14 @@ class VectorDBService:
         except Exception as e:
             print(f"Error retrieving documents from vector database: {e}")
             return []
+
+    def delete_document(self, filename: str) -> bool:
+        """Deletes all chunks associated with a specific document filename."""
+        try:
+            # Delete based on the metadata source property
+            self.collection.delete(where={"source": filename})
+            print(f"Successfully deleted document '{filename}' from vector database.")
+            return True
+        except Exception as e:
+            print(f"Error deleting document '{filename}': {e}")
+            return False

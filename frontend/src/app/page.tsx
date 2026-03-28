@@ -2,11 +2,13 @@
 import { useState, useEffect } from 'react';
 import { FileUpload } from '@/components/file-upload';
 import { ChatInterface } from '@/components/chat-interface';
+import { Trash2, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
 export default function Home() {
   const [documents, setDocuments] = useState<string[]>([]);
   const [loadingDocs, setLoadingDocs] = useState<boolean>(true);
+  const [deletingDoc, setDeletingDoc] = useState<string | null>(null);
 
   // Fetch documents function
   const fetchDocuments = async () => {
@@ -31,6 +33,20 @@ export default function Home() {
     console.log(`Successfully processed document with task: ${taskId}`);
     // Refresh document list after successful upload processing
     fetchDocuments();
+  };
+
+  const handleDeleteDocument = async (filename: string) => {
+    try {
+      setDeletingDoc(filename);
+      await axios.delete(`http://localhost:8000/api/documents/${encodeURIComponent(filename)}`);
+      // Update local state instead of doing a full refetch for snappier UI
+      setDocuments(prev => prev.filter(doc => doc !== filename));
+    } catch (error) {
+      console.error(`Failed to delete document ${filename}`, error);
+      alert('Failed to delete the document. Please ensure the backend is running.');
+    } finally {
+      setDeletingDoc(null);
+    }
   };
 
   return (
@@ -58,7 +74,7 @@ export default function Home() {
           <div className="mt-16">
             <h3 className="text-xl font-semibold mb-6 flex items-center">
               <span className="bg-primary/10 text-primary p-2 rounded-lg mr-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
               </span>
               Recent Documents
             </h3>
@@ -72,15 +88,31 @@ export default function Home() {
             ) : documents.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {documents.map((docName, index) => (
-                  <div key={index} className="group p-5 rounded-xl border bg-card hover:border-primary/50 hover:shadow-md transition-all">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="p-2 bg-primary/10 rounded-lg text-primary">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  <div key={index} className="group flex flex-col justify-between p-5 rounded-xl border bg-card hover:border-primary/50 hover:shadow-md transition-all relative">
+                    <div>
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        </div>
+                        <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">Ready</span>
                       </div>
-                      <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">Ready</span>
+                      <h4 className="font-medium text-sm truncate pr-8" title={docName}>{docName}</h4>
+                      <p className="text-xs text-muted-foreground mt-1">Vectorized & embedded</p>
                     </div>
-                    <h4 className="font-medium text-sm truncate" title={docName}>{docName}</h4>
-                    <p className="text-xs text-muted-foreground mt-1">Vectorized & embedded</p>
+                    
+                    {/* Delete overlay that appears on hover */}
+                    <button 
+                      onClick={() => handleDeleteDocument(docName)}
+                      disabled={deletingDoc === docName}
+                      className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md opacity-0 group-hover:opacity-100 transition-all disabled:opacity-100"
+                      title="Delete document"
+                    >
+                      {deletingDoc === docName ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-destructive" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </button>
                   </div>
                 ))}
               </div>
