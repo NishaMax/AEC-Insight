@@ -40,3 +40,20 @@ class VectorDBService:
             ids=ids
         )
         print(f"Successfully added {len(chunks)} chunks to vector database for {filename}.")
+
+    def get_all_documents(self) -> List[str]:
+        """Retrieves a list of unique document filenames stored in the vector database."""
+        try:
+            results = self.collection.get(include=["metadatas"])
+            metadatas = results.get("metadatas", [])
+            
+            # Extract unique source filenames
+            unique_sources = set()
+            for metadata in metadatas:
+                if metadata and "source" in metadata:
+                    unique_sources.add(metadata["source"])
+                    
+            return list(unique_sources)
+        except Exception as e:
+            print(f"Error retrieving documents from vector database: {e}")
+            return []
