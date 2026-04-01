@@ -25,15 +25,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# If you want to allow any origin temporarily during early deployments, uncomment:
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
 load_dotenv() # Load environment variables like GOOGLE_API_KEY from .env locally
 
 @app.get("/")
