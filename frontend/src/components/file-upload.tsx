@@ -6,6 +6,8 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import axios from 'axios';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:8000';
+
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -37,7 +39,7 @@ export function FileUpload({ onSuccess, className }: FileUploadProps) {
     formData.append('file', file);
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/documents/upload', formData, {
+      const response = await axios.post(`${API_BASE_URL}/api/documents/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -48,7 +50,7 @@ export function FileUpload({ onSuccess, className }: FileUploadProps) {
       // Poll for processing status
       const pollInterval = setInterval(async () => {
         try {
-          const statusRes = await axios.get(`http://127.0.0.1:8000/api/documents/status/${taskId}`);
+          const statusRes = await axios.get(`${API_BASE_URL}/api/documents/status/${taskId}`);
           const status = statusRes.data.status;
           
           if (status === 'completed') {

@@ -4,6 +4,8 @@ import { Send, User, Bot, Loader2 } from 'lucide-react';
 import { Card } from './ui/card';
 import { v4 as uuidv4 } from 'uuid'; // We'll need a simple session ID
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:8000';
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -61,13 +63,16 @@ export function ChatInterface() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/api/chat', {
+      const response = await axios.post(`${API_BASE_URL}/api/chat`, {
         query: userMessage,
         session_id: sessionId
       });
       setMessages(prev => [...prev, { role: 'assistant', content: normalizeAssistantContent(response.data.content) }]);
-    } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Connection to BuildSight RAG API failed. Make sure the backend server is running.' }]);
+    } catch (error: unknown) {
+      const detail = axios.isAxiosError(error)
+        ? (error.response?.data?.detail ?? error.message)
+        : 'Unknown error';
+      setMessages(prev => [...prev, { role: 'assistant', content: `Request failed: ${detail}` }]);
     } finally {
       setIsLoading(false);
     }
