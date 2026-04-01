@@ -5,6 +5,8 @@ import { ChatInterface } from '@/components/chat-interface';
 import { Trash2, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://127.0.0.1:8000';
+
 export default function Home() {
   const [documents, setDocuments] = useState<string[]>([]);
   const [loadingDocs, setLoadingDocs] = useState<boolean>(true);
@@ -13,7 +15,7 @@ export default function Home() {
   // Fetch documents function
   const fetchDocuments = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/documents');
+      const response = await axios.get(`${API_BASE_URL}/api/documents`);
       if (response.data && response.data.documents) {
         setDocuments(response.data.documents);
       }
@@ -38,8 +40,7 @@ export default function Home() {
   const handleDeleteDocument = async (filename: string) => {
     try {
       setDeletingDoc(filename);
-      await axios.delete(`http://localhost:8000/api/documents/${encodeURIComponent(filename)}`);
-      // Update local state instead of doing a full refetch for snappier UI
+      await axios.delete(`${API_BASE_URL}/api/documents/${encodeURIComponent(filename)}`);
       setDocuments(prev => prev.filter(doc => doc !== filename));
     } catch (error) {
       console.error(`Failed to delete document ${filename}`, error);

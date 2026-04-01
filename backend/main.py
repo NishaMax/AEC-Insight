@@ -14,7 +14,7 @@ app = FastAPI(title="BuildSight RAG API", description="API for architectural doc
 # Define CORS to allow Next.js frontend to communicate
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update this to specific origins in production
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -125,55 +125,65 @@ async def delete_document(filename: str):
 async def chat_endpoint(request: ChatRequest):
     """Search vector DB and formulate an answer using RAG with Conversation History."""
     try:
-        # Retrieve or initialize conversation history for the session
         session_id = request.session_id
         if session_id not in chat_histories:
             chat_histories[session_id] = []
-            
         history = chat_histories[session_id]
 
-        # Basic implementation: We will just grab chunks and let OpenAI generate a response here
-        docs = vector_db_service.db.similarity_search(request.query, k=5)
-        
-        if not docs:
-            return {"role": "assistant", "content": "I don't have any uploaded documents to pull context from yet. Please upload a PDF first."}
-
-        context = "\n\n".join([doc.page_content for doc in docs])
-
-        from langchain_openai import ChatOpenAI
-        from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-
-        llm = ChatOpenAI(temperature=0.3, model="gpt-3.5-turbo")
-        
-        system_prompt = (
-            "You are an expert architectural and engineering AI assistant named BuildSight RAG. "
-            "Use the provided document context to answer the user's question accurately and professionally. "
-            "If the answer cannot be found in the context, state that clearly."
+        query_embedding = vector_db_service.embeddings.embed_query(request.query)
+        results = vector_db_service.collection.query(
+            query_embeddings=[query_embedding],
+            n_results=5,
+            include=["documents", "metadatas"],
         )
 
-        # Build prompt using recent history (e.g., last 4 messages to save context limits)
+        docs = (results.get("documents") or [[]])[0]
+        metas = (results.get("metadatas") or [[]])[0]
+        if not docs:
+            return {
+                "role": "assistant",
+                "content": "I don't have any uploaded documents to pull context from yet. Please upload a PDF first.",
+            }
+
+        # Build context with lightweight citations
+        pairs = []
+        for i, doc in enumerate(docs):
+            src = None
+            if i < len(metas) and metas[i] and isinstance(metas[i], dict):
+                src = metas[i].get("source")
+            label = f"Source: {src}" if src else "Source: unknown"
+            pairs.append(f"[{i+1}] {label}\n{doc}")
+
+        context = "\n\n".join(pairs)
+        # Cap context to avoid overly large prompts
+        context = context[:12000]
+
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+
+        llm = ChatGoogleGenerativeAI(model="models/gemini-flash-latest", temperature=0.3)
+        system_prompt = (
+            "You are an expert architectural and engineering AI assistant named BuildSight RAG. "
+            "Answer using ONLY the provided context. "
+            "When relevant, cite sources using bracket numbers like [1], [2]. "
+            "If the answer cannot be found in the context, say so clearly."
+        )
+
         messages = [SystemMessage(content=system_prompt)]
-        
-        # Add a few past interactions for context
         for msg in history[-4:]:
             if msg["role"] == "user":
                 messages.append(HumanMessage(content=msg["content"]))
             elif msg["role"] == "assistant":
                 messages.append(AIMessage(content=msg["content"]))
 
-        # Append the current query with the extracted context
-        messages.append(
-            HumanMessage(content=f"Context:\n{context}\n\nQuestion: {request.query}")
-        )
-
+        messages.append(HumanMessage(content=f"Context:\n{context}\n\nQuestion: {request.query}"))
         response = llm.invoke(messages)
-        
-        # Save to history
+
         chat_histories[session_id].append({"role": "user", "content": request.query})
-        chat_histories[session_id].append({"role": "assistant", "content": response.content})
+        content = getattr(response, "content", str(response))
+        chat_histories[session_id].append({"role": "assistant", "content": content})
 
-        return {"role": "assistant", "content": response.content}
-
+        return {"role": "assistant", "content": content}
     except Exception as e:
         print(f"Chat error: {e}")
-        return {"role": "assistant", "content": "I encountered an error trying to process your request."}
+        raise HTTPException(status_code=500, detail=str(e))
