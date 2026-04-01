@@ -1,6 +1,15 @@
-import fitz  # PyMuPDF
+import os
+import traceback
 from typing import List
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+try:
+    # Prefer the actively maintained fork
+    from pypdf import PdfReader  # type: ignore
+except Exception:  # pragma: no cover
+    # Fallback for environments that still use PyPDF2
+    from PyPDF2 import PdfReader  # type: ignore
+
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 class DocumentService:
     """Service to handle document parsing and text manipulation."""
@@ -10,12 +19,14 @@ class DocumentService:
         """Extracts all raw text from a PDF file."""
         text = ""
         try:
-            with fitz.open(filepath) as doc:
-                for page in doc:
-                    text += page.get_text("text") + "\n"
+            with open(filepath, "rb") as file:
+                reader = PdfReader(file)
+                for page in reader.pages:
+                    page_text = page.extract_text() or ""
+                    text += page_text + "\n"
         except Exception as e:
             print(f"Error extracting text from {filepath}: {e}")
-            raise
+            traceback.print_exc()
         return text
 
     @staticmethod

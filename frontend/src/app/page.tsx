@@ -13,7 +13,7 @@ export default function Home() {
   // Fetch documents function
   const fetchDocuments = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/api/documents');
+      const response = await axios.get('http://127.0.0.1:8000/api/documents');
       if (response.data && response.data.documents) {
         setDocuments(response.data.documents);
       }
@@ -38,7 +38,7 @@ export default function Home() {
   const handleDeleteDocument = async (filename: string) => {
     try {
       setDeletingDoc(filename);
-      await axios.delete(`http://localhost:8000/api/documents/${encodeURIComponent(filename)}`);
+      await axios.delete(`http://127.0.0.1:8000/api/documents/${encodeURIComponent(filename)}`);
       // Update local state instead of doing a full refetch for snappier UI
       setDocuments(prev => prev.filter(doc => doc !== filename));
     } catch (error) {

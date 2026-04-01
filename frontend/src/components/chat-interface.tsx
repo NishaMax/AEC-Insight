@@ -9,6 +9,32 @@ interface Message {
   content: string;
 }
 
+function normalizeAssistantContent(content: unknown): string {
+  if (typeof content === 'string') return content;
+  if (content == null) return '';
+
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (typeof part === 'string') return part;
+        if (part && typeof part === 'object' && 'text' in part) {
+          const t = (part as { text?: unknown }).text;
+          return typeof t === 'string' ? t : '';
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join('');
+  }
+
+  if (typeof content === 'object' && content !== null && 'text' in content) {
+    const t = (content as { text?: unknown }).text;
+    return typeof t === 'string' ? t : JSON.stringify(content);
+  }
+
+  return String(content);
+}
+
 export function ChatInterface() {
   const [sessionId] = useState(() => uuidv4()); // Generate unique session per mount
   const [messages, setMessages] = useState<Message[]>([
@@ -35,12 +61,12 @@ export function ChatInterface() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8000/api/chat', {
+      const response = await axios.post('http://127.0.0.1:8000/api/chat', {
         query: userMessage,
         session_id: sessionId
       });
-      setMessages(prev => [...prev, { role: 'assistant', content: response.data.content }]);
-    } catch (_error) {
+      setMessages(prev => [...prev, { role: 'assistant', content: normalizeAssistantContent(response.data.content) }]);
+    } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Connection to BuildSight RAG API failed. Make sure the backend server is running.' }]);
     } finally {
       setIsLoading(false);
