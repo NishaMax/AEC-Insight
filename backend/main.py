@@ -14,13 +14,27 @@ app = FastAPI(title="BuildSight RAG API", description="API for architectural doc
 # Define CORS to allow Next.js frontend to communicate
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"], 
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost",
+        "http://127.0.0.1",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-load_dotenv() # Load environment variables like OPENAI_API_KEY from .env locally
+# If you want to allow any origin temporarily during early deployments, uncomment:
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+load_dotenv() # Load environment variables like GOOGLE_API_KEY from .env locally
 
 @app.get("/")
 async def root():
@@ -82,16 +96,22 @@ async def upload_document(
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
     
-    # Save uploaded file temporarily
-    temp_file_path = f"temp_{file.filename}"
-    with open(temp_file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    try:
+        # Save uploaded file to a dedicated uploads dir to avoid clutter and collisions
+        upload_dir = "uploads"
+        os.makedirs(upload_dir, exist_ok=True)
+
+        temp_file_path = os.path.join(upload_dir, f"temp_{file.filename}")
+        with open(temp_file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
         
-    document_statuses[file.filename] = "uploading"
-    
-    # Add the document processing to the background task
-    background_tasks.add_task(process_document, temp_file_path, file.filename)
-    return {"filename": file.filename, "message": "Upload successful. Processing in background.", "task_id": file.filename}
+        document_statuses[file.filename] = "uploading"
+        
+        # Add the document processing to the background task
+        background_tasks.add_task(process_document, temp_file_path, file.filename)
+        return {"filename": file.filename, "message": "Upload successful. Processing in background.", "task_id": file.filename}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/documents/status/{task_id}")
 async def get_document_status(task_id: str):
