@@ -1,0 +1,17 @@
+# Environment files
+.env
+backend/.env
+frontend/.env
+frontend/.env.local
+
+# Local vector DB / Chroma persistence
+**/chroma_db/
+*.sqlite3
+
+# Python
+__pycache__/
+*.pyc
+
+# Node / Next
+node_modules/
+.next/
