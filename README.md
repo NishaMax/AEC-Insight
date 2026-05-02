@@ -1,5 +1,11 @@
 # AEC-Insight
 
+<p align="center">
+  <a href="http://13.206.83.220/" target="_blank" rel="noopener noreferrer">
+    <strong>Live Demo — http://13.206.83.220/</strong>
+  </a>
+</p>
+
 AEC-Insight repository for "BuildSight RAG".
 
 ## Overview
