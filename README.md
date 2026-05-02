@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="http://13.206.83.220/" target="_blank" rel="noopener noreferrer">
-    <strong>Live Demo — http://13.206.83.220/</strong>
+    <strong>Live Demo — http://13.206.182.38/</strong>
   </a>
 </p>
 
