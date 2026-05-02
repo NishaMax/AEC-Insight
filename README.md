@@ -6,6 +6,8 @@
   </a>
 </p>
 
+<p align="center"><em>Hosted on AWS — EC2 (app) + S3 (uploads)</em></p>
+
 AEC-Insight repository for "BuildSight RAG".
 
 ## Overview
